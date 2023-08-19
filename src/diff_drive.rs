@@ -4,7 +4,6 @@ use super::wheel::Orientation as Orientation;
 use super::position::Position as Position;
 
 use std::time::Instant;
-use std::f32::consts::PI;
 
 // Create a new Differential-Drive Robbot
 //
@@ -75,19 +74,41 @@ impl DifferentialDrive {
 		self.right.stop();
 	}
 
+	/// Set the Coordinates the robot should reach
+	///
+	/// # Arguments
+	///
+	/// * `x` - X-Coordinates in mm
+	/// * `y` - Y-Coordinates in mm
+	pub fn set_goal(&mut self, x: f64, y: f64) {
+		self.position.set_goal(x, y);
+	}
+
 	/// Called on each step, calculates the new position and how to get to the wanted one, etc.
 	pub fn step(&mut self) {
 		if self.running {
 			let now = Instant::now();
 			let duration = now.duration_since(self.last_step).as_nanos();
 
+			// Get the travelling distance
 			let (dist_l, angle_l) = self.left.step(duration);
 			let (dist_r, angle_r) = self.right.step(duration);
+			//println!("Step[{:?}ns]: left: {}mm, {}rad, {}mm total | right: {}mm, {}rad, {}mm total", duration, dist_l, angle_l, self.left.total_distance(), dist_r, angle_r, self.right.total_distance());
 
-			self.left.set_speed(0.1);
-			self.right.set_speed(0.2);
+			// Update the new position of of the robot
+			self.position.calculate_position(dist_l, dist_r, self.wheel_distance);
+			println!("Pos:\tx={}\ty={}\tphi={}", self.position.x, self.position.y, Position::degree(self.position.phi as f64));
 
-			println!("Step[{:?}ns]: left: {}mm, {}rad, {}mm total | right: {}mm, {}rad, {}mm total", duration, dist_l, angle_l, self.left.total_distance(), dist_r, angle_r, self.right.total_distance());
+			// Stop if the goal is reached, otherwise get the velocities for the wheels
+			if !self.position.goal_reached() {
+				let (left, right) = self.position.get_goal_velocities(self.wheel_distance);
+				self.left.set_speed(left);
+				self.right.set_speed(right);
+			} else {
+				self.left.stop();
+				self.right.stop();
+			}
+
 			self.last_step = now;
 		}
 	}

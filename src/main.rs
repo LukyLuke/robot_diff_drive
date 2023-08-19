@@ -58,12 +58,16 @@ fn main() {
 		wheel_right_gearbox,
 		wheel_right_resolution
 	), wheel_right_reversed);
+
+	robot.set_goal(500.0, 500.0);
 	robot.start();
 
 	while !terminate.load(Ordering::Relaxed) {
-		sleep(Duration::from_millis(10));
+		sleep(Duration::from_millis(1));
 		robot.step();
 	}
+
+	robot.halt();
 	hal::cleanup();
 }
 
