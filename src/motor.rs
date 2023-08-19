@@ -50,4 +50,26 @@ impl Motor {
 		self.angle * self.wheel.radius * PI
 	}
 
+	/// Set the speed of the motor
+	///
+	/// The value can go from -1.0 up to 1.0
+	/// where minus values will drive backward
+	///
+	/// # Arguments
+	///
+	/// * `speed` - The speed for this motor
+	pub(crate) fn set_speed(&self, speed: f64) {
+		let mut duty = if speed > 1.0 { 1.0 } else { speed };
+		duty = if speed < -1.0 { -1.0 } else { duty };
+		hal::run_motor(self.wheel.motor, match self.reversed {
+			true => -1.0 * duty,
+			false => duty,
+		});
+	}
+
+	/// Stop the motor and brake
+	pub(crate) fn stop(&self, ) {
+		hal::brake_motor(self.wheel.motor);
+	}
+
 }

@@ -71,6 +71,8 @@ impl DifferentialDrive {
 	/// Stop the robot
 	pub fn halt(&mut self) {
 		self.running = false;
+		self.left.stop();
+		self.right.stop();
 	}
 
 	/// Called on each step, calculates the new position and how to get to the wanted one, etc.
@@ -81,6 +83,9 @@ impl DifferentialDrive {
 
 			let (dist_l, angle_l) = self.left.step(duration);
 			let (dist_r, angle_r) = self.right.step(duration);
+
+			self.left.set_speed(0.1);
+			self.right.set_speed(0.2);
 
 			println!("Step[{:?}ns]: left: {}mm, {}rad, {}mm total | right: {}mm, {}rad, {}mm total", duration, dist_l, angle_l, self.left.total_distance(), dist_r, angle_r, self.right.total_distance());
 			self.last_step = now;

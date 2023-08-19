@@ -73,9 +73,11 @@ pub fn init_motors() {
 		librobotcontrol_sys::rc_motor_brake(Motor::MOTOR4 as i32);
 	}
 }
-pub fn run_motor(motor: Motor, duty: f64) {
-	unsafe { librobotcontrol_sys::rc_motor_set(motor as i32, duty); }
+pub fn run_motor(motor: Motor, speed: f64) -> i32 {
+	let mut duty = if speed > 1.0 { 1.0 } else { speed };
+	duty = if speed < -1.0 { -1.0 } else { duty };
+	unsafe { librobotcontrol_sys::rc_motor_set(motor as i32, duty) }
 }
-pub fn brake_motor(motor: Motor) {
-	unsafe { librobotcontrol_sys::rc_motor_brake(motor as i32); }
+pub fn brake_motor(motor: Motor) -> i32 {
+	unsafe { librobotcontrol_sys::rc_motor_brake(motor as i32) }
 }
