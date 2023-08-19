@@ -1,4 +1,5 @@
 mod hal;
+mod planner;
 mod motor;
 mod wheel;
 mod position;
@@ -59,7 +60,7 @@ fn main() {
 		wheel_right_resolution
 	), wheel_right_reversed);
 
-	robot.set_goal(500.0, 500.0);
+	robot.path_planner(planner::from_points(&[(500.0, 0.0), (500.0, 500.0), (0.0, 500.0), (0.0, 0.0)]));
 	robot.start();
 
 	while !terminate.load(Ordering::Relaxed) {

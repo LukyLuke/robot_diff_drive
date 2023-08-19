@@ -1,9 +1,11 @@
+use super::planner::Planner as Planner;
 use super::motor::Motor as Motor;
 use super::wheel::Wheel as Wheel;
 use super::wheel::Orientation as Orientation;
 use super::position::Position as Position;
 
 use std::time::Instant;
+
 
 // Create a new Differential-Drive Robbot
 //
@@ -18,6 +20,7 @@ pub fn new(wheel_distance: f32, caster_distance: f32) -> DifferentialDrive {
 		left: Motor::default(),
 		right: Motor::default(),
 		position: Position::default(),
+		planner: None,
 		running: false,
 		last_step: Instant::now(),
 	}
@@ -30,7 +33,7 @@ pub struct DifferentialDrive {
 	left: Motor,
 	right: Motor,
 	position: Position,
-
+	planner: Option<Planner>,
 	running: bool,
 	last_step: Instant,
 }
@@ -84,6 +87,22 @@ impl DifferentialDrive {
 		self.position.set_goal(x, y);
 	}
 
+	/// Set a path-planner
+	///
+	/// # Arguments
+	///
+	/// * `planner` - The Pathplanner to fetch points
+	pub fn path_planner(&mut self, planner: Planner) {
+		self.planner = Some(planner);
+		self.next_goal();
+	}
+
+	fn next_goal(&mut self) {
+		if let Ok(goal) = self.planner.as_mut().unwrap().next_goal() {
+			self.set_goal(goal.0, goal.1);
+		}
+	}
+
 	/// Called on each step, calculates the new position and how to get to the wanted one, etc.
 	pub fn step(&mut self) {
 		if self.running {
@@ -97,7 +116,12 @@ impl DifferentialDrive {
 
 			// Update the new position of of the robot
 			self.position.calculate_position(dist_l, dist_r, self.wheel_distance);
-			println!("Pos:\tx={}\ty={}\tphi={}", self.position.x, self.position.y, Position::degree(self.position.phi as f64));
+			println!("gx={}\tgy={}\tx={}\ty={}\tphi={}", self.position.goal_x, self.position.goal_y, self.position.x, self.position.y, Position::degree(self.position.phi as f64));
+
+			// If we reached the goal and have a path planner, set the next goal
+			if self.planner.is_some() && self.position.goal_reached() {
+				self.next_goal();
+			}
 
 			// Stop if the goal is reached, otherwise get the velocities for the wheels
 			if !self.position.goal_reached() {
