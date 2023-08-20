@@ -22,6 +22,7 @@ pub fn new(wheel_distance: f32, caster_distance: f32) -> DifferentialDrive {
 		position: Position::default(),
 		planner: None,
 		running: false,
+		loop_run: false,
 		last_step: Instant::now(),
 	}
 }
@@ -35,6 +36,7 @@ pub struct DifferentialDrive {
 	position: Position,
 	planner: Option<Planner>,
 	running: bool,
+	loop_run: bool,
 	last_step: Instant,
 }
 impl DifferentialDrive {
@@ -65,8 +67,9 @@ impl DifferentialDrive {
 	}
 
 	/// Start the robot
-	pub fn start(&mut self) {
+	pub fn start(&mut self, restart_on_end: bool) {
 		self.running = true;
+		self.loop_run = restart_on_end;
 		self.last_step = Instant::now();
 	}
 
@@ -94,12 +97,23 @@ impl DifferentialDrive {
 	/// * `planner` - The Pathplanner to fetch points
 	pub fn path_planner(&mut self, planner: Planner) {
 		self.planner = Some(planner);
+		if let Some(plan) = &self.planner {
+			let start = plan.start();
+			self.position.set_position(start.0, start.1, start.2);
+		}
 		self.next_goal();
 	}
 
+	/// sets the next goal for the Robot based on the PathPlanner
 	fn next_goal(&mut self) {
-		if let Ok(goal) = self.planner.as_mut().unwrap().next_goal() {
-			self.set_goal(goal.0, goal.1);
+		if let Some(planner) = self.planner.as_mut() {
+			if let Ok(goal) = planner.next_goal() {
+				self.set_goal(goal.0, goal.1);
+			} else if self.loop_run {
+				planner.restart();
+				let start = planner.start();
+				self.set_goal(start.0, start.1);
+			}
 		}
 	}
 
@@ -110,13 +124,12 @@ impl DifferentialDrive {
 			let duration = now.duration_since(self.last_step).as_nanos();
 
 			// Get the travelling distance
-			let (dist_l, angle_l) = self.left.step(duration);
-			let (dist_r, angle_r) = self.right.step(duration);
-			//println!("Step[{:?}ns]: left: {}mm, {}rad, {}mm total | right: {}mm, {}rad, {}mm total", duration, dist_l, angle_l, self.left.total_distance(), dist_r, angle_r, self.right.total_distance());
+			let (dist_l, _angle_l) = self.left.step(duration);
+			let (dist_r, _angle_r) = self.right.step(duration);
 
 			// Update the new position of of the robot
 			self.position.calculate_position(dist_l, dist_r, self.wheel_distance);
-			println!("gx={}\tgy={}\tx={}\ty={}\tphi={}", self.position.goal_x, self.position.goal_y, self.position.x, self.position.y, Position::degree(self.position.phi as f64));
+			self.position.debug();
 
 			// If we reached the goal and have a path planner, set the next goal
 			if self.planner.is_some() && self.position.goal_reached() {

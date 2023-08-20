@@ -23,7 +23,7 @@ impl Motor {
 	/// # Returns
 	///
 	/// A tuple of ( Distance driven since last step, Angle changed since last step )
-	pub(crate) fn step(&mut self, duration: u128) -> (f32, f32) {
+	pub(crate) fn step(&mut self, _duration: u128) -> (f32, f32) {
 		if let Orientation::UNDEFINED = self.wheel.orientation {
 			println!("ERROR: Undefined Wheel-Orientation for Encoder {} and Motor {}", self.wheel.encoder as i32, self.wheel.motor as i32);
 			return (0.0, 0.0);
@@ -68,7 +68,7 @@ impl Motor {
 	}
 
 	/// Stop the motor and brake
-	pub(crate) fn stop(&self, ) {
+	pub(crate) fn stop(&self) {
 		hal::brake_motor(self.wheel.motor);
 	}
 

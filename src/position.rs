@@ -12,6 +12,25 @@ pub struct Position {
 }
 
 impl Position {
+	/// Set the robots current position
+	///
+	/// # Arguments
+	///
+	/// * `x` - X-Position where the robot is at the moment
+	/// * `y` - Y-Position where the robot is at the moment
+	/// * `phi` - The robots alignment in rad
+	pub fn set_position(&mut self, x: f64, y: f64, phi: f32) {
+		match phi {
+			phi if phi > std::f32::consts::PI => self.set_position(x, y, phi - std::f32::consts::PI),
+			phi if phi < -std::f32::consts::PI => self.set_position(x, y, phi + std::f32::consts::PI),
+			_ => {
+				self.x = x;
+				self.y = y;
+				self.phi = phi;
+			}
+		}
+	}
+
 	/// Set the goal which should be reached
 	///
 	/// # Arguments
@@ -39,9 +58,11 @@ impl Position {
 		let delta_y = self.phi.sin() * distance;
 		let delta_angle = (right - left) / wheel_distance;
 
-		self.x = self.x + delta_x as f64;
-		self.y = self.y + delta_y as f64;
-		self.phi = self.phi + delta_angle;
+		self.set_position(
+			self.x + delta_x as f64,
+			self.y + delta_y as f64,
+			self.phi + delta_angle
+		);
 	}
 
 	/// Calculates the velocities for a left and right wheel to the goal
@@ -56,14 +77,18 @@ impl Position {
 	pub fn get_goal_velocities(&self, wheel_distance: f32) -> (f64, f64) {
 		let delta_x = self.goal_x - self.x;
 		let delta_y = self.goal_y - self.y;
+		let phi = delta_y.atan2(delta_x);
+		let delta_phi = phi - self.phi as f64;
 		let distance = ( delta_x.powi(2) + delta_y.powi(2) ).sqrt();
-		let delta_phi = delta_y.atan2(delta_x) - self.phi as f64;
 
-		// Factor based on delta-phi to define how faster/slower the right wheel should drive
-		let fact = 1.0 + (delta_phi / std::f64::consts::FRAC_PI_2);
-		//println!("Diff:\tx={}\ty={}\tphi={}\tdist={}\tfact={}", delta_x, delta_y, Self::degree(delta_phi), distance, fact);
+		// Factor based on delta-phi to define how faster/slower the right/left wheel should drive
+		let fact = delta_phi.abs() / std::f64::consts::PI;
 
-		(0.1, 0.1 * fact)
+		let speed = 0.05;
+		match delta_phi.is_sign_negative() {
+			true  => (speed * (2.0 + fact), speed * (1.0 - fact)),
+			false => (speed * (1.0 - fact), speed * (2.0 + fact))
+		}
 	}
 
 	/// Check if the goal is reached
@@ -73,10 +98,33 @@ impl Position {
 		&& ((self.y + GOAL_AREA) > self.goal_y && (self.y - GOAL_AREA) < self.goal_y)
 	}
 
+	/// Debug output for visualize the position and orientation
+	pub fn debug(&self) {
+		println!("{};{};{};{};{}", self.goal_x, self.goal_y, self.x, self.y, Self::degree(self.phi.into()));
+	}
+
+	/// Convert a radian into a degree
+	///
+	/// # Arguments
+	///
+	/// * `rad` - Radian Value to convert
+	///
+	/// # Result
+	///
+	/// The angle in degree
 	pub fn degree(rad: f64) -> f64 {
 		(rad * 180.0) / std::f64::consts::PI
 	}
 
+	/// Convert a degree into a radian
+	///
+	/// # Arguments
+	///
+	/// * `deg` - Degree Value to convert
+	///
+	/// # Result
+	///
+	/// The angle in radian
 	pub fn radian(deg: f64) -> f64 {
 		(deg * std::f64::consts::PI) / 180.0
 	}

@@ -60,8 +60,8 @@ fn main() {
 		wheel_right_resolution
 	), wheel_right_reversed);
 
-	robot.path_planner(planner::from_points(&[(500.0, 0.0), (500.0, 500.0), (0.0, 500.0), (0.0, 0.0)]));
-	robot.start();
+	robot.path_planner(planner::from_points((200.0, 200.0, 0.0), &[(400.0, 0.0), (800.0, 400.0), (0.0, 0.0)]));
+	robot.start(true);
 
 	while !terminate.load(Ordering::Relaxed) {
 		sleep(Duration::from_millis(1));
