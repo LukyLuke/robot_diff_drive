@@ -1,5 +1,6 @@
 mod hal;
 mod planner;
+mod distance;
 mod motor;
 mod wheel;
 mod position;
@@ -59,6 +60,9 @@ fn main() {
 		wheel_right_gearbox,
 		wheel_right_resolution
 	), wheel_right_reversed);
+
+	// Add a collision detection
+	robot.collision_detection( &mut[ distance::new((hal::GpioChip::GPIO3, 17), (hal::GpioChip::GPIO3, 20)) ] );
 
 	robot.path_planner(planner::from_points((200.0, 200.0, 0.0), &[(400.0, 0.0), (800.0, 400.0), (0.0, 0.0)]));
 	robot.start(true);

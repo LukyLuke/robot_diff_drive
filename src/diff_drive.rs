@@ -1,3 +1,4 @@
+use super::distance::Ultrasonic as Ultrasonic;
 use super::planner::Planner as Planner;
 use super::motor::Motor as Motor;
 use super::wheel::Wheel as Wheel;
@@ -5,7 +6,6 @@ use super::wheel::Orientation as Orientation;
 use super::position::Position as Position;
 
 use std::time::Instant;
-
 
 // Create a new Differential-Drive Robbot
 //
@@ -24,6 +24,7 @@ pub fn new(wheel_distance: f32, caster_distance: f32) -> DifferentialDrive {
 		running: false,
 		loop_run: false,
 		last_step: Instant::now(),
+		distances: vec!(),
 	}
 }
 
@@ -38,6 +39,7 @@ pub struct DifferentialDrive {
 	running: bool,
 	loop_run: bool,
 	last_step: Instant,
+	distances: Vec<Ultrasonic>,
 }
 impl DifferentialDrive {
 	/// Add a motorized wheel
@@ -78,6 +80,8 @@ impl DifferentialDrive {
 		self.running = false;
 		self.left.stop();
 		self.right.stop();
+
+		self.distances.iter_mut().for_each(|dist| { dist.stop(); });
 	}
 
 	/// Set the Coordinates the robot should reach
@@ -102,6 +106,18 @@ impl DifferentialDrive {
 			self.position.set_position(start.0, start.1, start.2);
 		}
 		self.next_goal();
+	}
+
+	/// Initialize one or more collision detection sensor
+	///
+	/// # Arguments
+	///
+	/// * `sensors` - List of Ultrasonic Sensors
+	pub fn collision_detection(&mut self, sensors: &mut[Ultrasonic]) {
+		for sensor in sensors {
+			sensor.start();
+			self.distances.push(sensor.clone());
+		}
 	}
 
 	/// sets the next goal for the Robot based on the PathPlanner
@@ -129,7 +145,7 @@ impl DifferentialDrive {
 
 			// Update the new position of of the robot
 			self.position.calculate_position(dist_l, dist_r, self.wheel_distance);
-			self.position.debug();
+			//self.position.debug();
 
 			// If we reached the goal and have a path planner, set the next goal
 			if self.planner.is_some() && self.position.goal_reached() {
